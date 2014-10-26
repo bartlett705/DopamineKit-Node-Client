@@ -1,4 +1,4 @@
-DopamineLabs_Node-Client
+DopamineAPI_Node-Client
 ========================
 
 Make your NodeJS-powered app habit-forming
