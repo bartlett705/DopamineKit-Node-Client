@@ -1,12 +1,9 @@
-var sha1 = require('/usr/local/lib/node_modules/sha1');
-// var request = require('/usr/local/lib/node_modules/request');
-var request = require('/usr/local/lib/node_modules/sync-request');
-//
-//  track("eventName", [{"userID":"THX1138"}], , {amountSaved:3})
+var sha1 = require('sha1');
+var request = require('sync-request');
 
+function Dopamine() 
+{
 
-function Dopamine() {
-  console.log("in Dopamine constructor?");
   var self = this;
 
   self.credentials = {
@@ -27,36 +24,27 @@ function Dopamine() {
   self.actionNames = [];
 
   self.config = function(appID, productionKey, developmentKey, inProduction, token, versionID) {
-    console.log("in config. setting config vars");
     self.credentials.appID = appID;
     self.credentials.token = token;
     self.credentials.versionID = versionID;
     self.credentials.key.production = productionKey;
     self.credentials.key.development = developmentKey;
     self.credentials.key.inProduction = inProduction;
-    console.log("set to: ");
-    console.log(self);
   };
 
   self.pairReinforcement = function (pairing)
   {
-    console.log("in pairReinforcement");
-    
     if(self.actionNames.indexOf(pairing.action) === -1)
     {
-      //havent seen this action yet
       self.actionNames.push(pairing.action);
-
       var newActionPairing = {
         actionName: pairing.action,
         reinforcers:[]
       };
-
       for(var i=0; i<pairing.rewardFunctions.length; i++)
       {
         if(self.rewardFunctions.indexOf(pairing.rewardFunctions[i]) === -1)
         {
-          //new reward function
           self.rewardFunctions.push(pairing.rewardFunctions[i]);
           newActionPairing.reinforcers.push({
             functionName: pairing.rewardFunctions[i],
@@ -70,7 +58,6 @@ function Dopamine() {
       {
         if(self.feedbackFunctions.indexOf(pairing.feedbackFunctions[i]) === -1)
         {
-          //new feedback function
           self.feedbackFunctions.push(pairing.feedbackFunctions[i]);
           newActionPairing.reinforcers.push({
             functionName: pairing.feedbackFunctions[i],
@@ -80,19 +67,13 @@ function Dopamine() {
           });
         }
       }
-      console.log("about to push:");
-      console.log(newActionPairing);
       self.actionPairings.push(newActionPairing);
     }
-    console.log("at end of pairReinforcement");
   }
 
-  self.init = function(){
-
-    console.log("in init():");
-    console.log("init(): building payload then sending call");
+  self.init = function()
+  {
     console.log(sendCall(buildPayload('init', null, [{user:'INIT'}], null), 'init'));
-    console.log("oops");
   }
 
   self.reinforce = function(eventName, identity, metaData)
@@ -141,26 +122,19 @@ function Dopamine() {
 
     if(self.credentials.key.inProduction)
     {
-      console.log("use production key");
       payload.key = self.credentials.key.production;
     }
     else
     {
       payload.key = self.credentials.key.development;
     }
-
-    console.log("using this payload:");
-    console.log(payload);
-    
     return payload;
   }
 
   function sendCall(data, type)
   {
-    console.log("in sendCall:. sending");
     var req = request('POST', 'https://api.usedopamine.com/v2/app/' + self.credentials.appID + '/' + type + '/', {json:data});
     return JSON.parse(String(req.body));
-    console.log("in sendCall: end of function");
   }
 }
 

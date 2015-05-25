@@ -7,7 +7,7 @@ dopamine.config("556350ce84a8d6f40f6865ef", "bc58729809fcde0bd8437b7ba914e62364f
 dopamine.pairReinforcement({action: "testAction", rewardFunctions:["reward1", "reward2"], feedbackFunctions:["neutral1"]});
 
 //initialize your app with the Dopamine API (remember to do this with your development key first: dopamine.config(.., .., .., false, .., ..);)
-// dopamine.init();
+dopamine.init();
 
 
 //reward functions:
