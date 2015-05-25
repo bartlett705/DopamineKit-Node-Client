@@ -1,0 +1,168 @@
+var sha1 = require('/usr/local/lib/node_modules/sha1');
+// var request = require('/usr/local/lib/node_modules/request');
+var request = require('/usr/local/lib/node_modules/sync-request');
+//
+//  track("eventName", [{"userID":"THX1138"}], , {amountSaved:3})
+
+
+function Dopamine() {
+  console.log("in Dopamine constructor?");
+  var self = this;
+
+  self.credentials = {
+    appID: "",
+    key: {
+      production: "",
+      development: "",
+      inProduction: false
+    },
+    token: "",
+    versionID: ""
+  };
+
+  self.rewardFunctions = [];
+  self.feedbackFunctions = [];
+  self.build = "";
+  self.actionPairings = [];
+  self.actionNames = [];
+
+  self.config = function(appID, productionKey, developmentKey, inProduction, token, versionID) {
+    console.log("in config. setting config vars");
+    self.credentials.appID = appID;
+    self.credentials.token = token;
+    self.credentials.versionID = versionID;
+    self.credentials.key.production = productionKey;
+    self.credentials.key.development = developmentKey;
+    self.credentials.key.inProduction = inProduction;
+    console.log("set to: ");
+    console.log(self);
+  };
+
+  self.pairReinforcement = function (pairing)
+  {
+    console.log("in pairReinforcement");
+    
+    if(self.actionNames.indexOf(pairing.action) === -1)
+    {
+      //havent seen this action yet
+      self.actionNames.push(pairing.action);
+
+      var newActionPairing = {
+        actionName: pairing.action,
+        reinforcers:[]
+      };
+
+      for(var i=0; i<pairing.rewardFunctions.length; i++)
+      {
+        if(self.rewardFunctions.indexOf(pairing.rewardFunctions[i]) === -1)
+        {
+          //new reward function
+          self.rewardFunctions.push(pairing.rewardFunctions[i]);
+          newActionPairing.reinforcers.push({
+            functionName: pairing.rewardFunctions[i],
+            type:"Reward",
+            constraint:[],
+            objective:[]
+          });
+        }
+      }
+      for(var i=0; i<pairing.feedbackFunctions.length; i++)
+      {
+        if(self.feedbackFunctions.indexOf(pairing.feedbackFunctions[i]) === -1)
+        {
+          //new feedback function
+          self.feedbackFunctions.push(pairing.feedbackFunctions[i]);
+          newActionPairing.reinforcers.push({
+            functionName: pairing.feedbackFunctions[i],
+            type:"Feedback",
+            constraint:[],
+            objective:[]
+          });
+        }
+      }
+      console.log("about to push:");
+      console.log(newActionPairing);
+      self.actionPairings.push(newActionPairing);
+    }
+    console.log("at end of pairReinforcement");
+  }
+
+  self.init = function(){
+
+    console.log("in init():");
+    console.log("init(): building payload then sending call");
+    console.log(sendCall(buildPayload('init', null, [{user:'INIT'}], null), 'init'));
+    console.log("oops");
+  }
+
+  self.reinforce = function(eventName, identity, metaData)
+  {
+    var response = sendCall(buildPayload('reinforce', eventName, identity, metaData), 'reinforce');
+    if(response.status === 200)
+    {
+      return response.reinforcementFunction.function;
+    }
+  }
+
+  self.track = function(eventName, identity, metaData)
+  {
+    var response = sendCall(buildPayload('track', eventName, identity, metaData), 'track');
+  }
+
+  function buildPayload(type, event, identity, metaData)
+  {
+
+    var payload = {
+      'token' : self.credentials.token,
+      'versionID': self.credentials.versionID,
+      'build': sha1(JSON.stringify(self.actionPairings)),
+      'identity':JSON.stringify(identity),
+      'UTC': Date.now(),
+      'localTime': Date.now(),
+      'ClientOS':'Node',
+      'ClientOSVersion': String(process.version),
+      'ClientAPIVersion' : '1.0.0'
+    };
+
+    if(type === 'init')
+    {
+        payload.feedbackFunctions = JSON.stringify(self.feedbackFunctions);
+        payload.rewardFunctions = JSON.stringify(self.rewardFunctions);
+        payload.actionPairings = JSON.stringify(self.actionPairings);
+    }
+    else
+    {
+        payload.eventName = event;
+        if(metaData !== null)
+        {
+          payload.metaData = metaData;
+        }
+    }
+
+    if(self.credentials.key.inProduction)
+    {
+      console.log("use production key");
+      payload.key = self.credentials.key.production;
+    }
+    else
+    {
+      payload.key = self.credentials.key.development;
+    }
+
+    console.log("using this payload:");
+    console.log(payload);
+    
+    return payload;
+  }
+
+  function sendCall(data, type)
+  {
+    console.log("in sendCall:. sending");
+    var req = request('POST', 'https://api.usedopamine.com/v2/app/' + self.credentials.appID + '/' + type + '/', {json:data});
+    return JSON.parse(String(req.body));
+    console.log("in sendCall: end of function");
+  }
+}
+
+
+module.exports = exports = new Dopamine();
