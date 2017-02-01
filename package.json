@@ -1,6 +1,6 @@
 {
   "name": "dopamine",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Make your node.js app habit forming using the Dopamine API",
   "main": "index.js",
   "scripts": {
@@ -18,13 +18,17 @@
   ],
   "author": "Ramsay Brown <ramsay@usedopamine.com> (http://www.usedopamine.com/)",
   "licenses": [
-  {
-    "type": "MIT",
-    "url": "https://github.com/DopamineLabs/DopamineAPI_Node-Client/blob/master/LICENSE-MIT"
-  }
-  ],  
+    {
+      "type": "MIT",
+      "url": "https://github.com/DopamineLabs/DopamineAPI_Node-Client/blob/master/LICENSE-MIT"
+    }
+  ],
   "bugs": {
     "url": "https://github.com/DopamineLabs/DopamineAPI_Node-Client/issues"
   },
-  "homepage": "https://github.com/DopamineLabs/DopamineAPI_Node-Client"
+  "homepage": "https://github.com/DopamineLabs/DopamineAPI_Node-Client",
+  "dependencies": {
+    "sha1": "^1.1.1",
+    "sync-request": "^4.0.1"
+  }
 }

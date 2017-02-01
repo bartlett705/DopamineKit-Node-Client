@@ -1,77 +1,142 @@
+var sha1 = require('sha1');
+var request = require('sync-request');
+
 function Dopamine() 
 {
+
   var self = this;
 
   self.credentials = {
     appID: "",
-    secret: {
+    key: {
       production: "",
       development: "",
       inProduction: false
     },
-    versionID: "",
+    token: "",
+    versionID: ""
   };
 
-  self.config = function(appID, productionSecret, developmentSecret, inProduction, versionID) {
+  self.rewardFunctions = [];
+  self.feedbackFunctions = [];
+  self.build = "";
+  self.actionPairings = [];
+  self.actionNames = [];
+
+  self.config = function(appID, productionKey, developmentKey, inProduction, token, versionID) {
     self.credentials.appID = appID;
-    self.credentials.secret.production = productionSecret;
-    self.credentials.secret.development = developmentSecret;
-    self.credentials.secret.inProduction = inProduction;
+    self.credentials.token = token;
     self.credentials.versionID = versionID;
+    self.credentials.key.production = productionKey;
+    self.credentials.key.development = developmentKey;
+    self.credentials.key.inProduction = inProduction;
   };
 
-  self.reinforce = function(actionID, identity, metaData)
+  self.pairReinforcement = function (pairing)
   {
-    var response = sendCall(buildPayload('reinforce', actionID, identity, metaData), 'reinforce');
-    
+    if(self.actionNames.indexOf(pairing.action) === -1)
+    {
+      self.actionNames.push(pairing.action);
+      var newActionPairing = {
+        actionName: pairing.action,
+        reinforcers:[]
+      };
+      for(var i=0; i<pairing.rewardFunctions.length; i++)
+      {
+        if(self.rewardFunctions.indexOf(pairing.rewardFunctions[i]) === -1)
+        {
+          self.rewardFunctions.push(pairing.rewardFunctions[i]);
+          newActionPairing.reinforcers.push({
+            functionName: pairing.rewardFunctions[i],
+            type:"Reward",
+            constraint:[],
+            objective:[]
+          });
+        }
+      }
+      for(var i=0; i<pairing.feedbackFunctions.length; i++)
+      {
+        if(self.feedbackFunctions.indexOf(pairing.feedbackFunctions[i]) === -1)
+        {
+          self.feedbackFunctions.push(pairing.feedbackFunctions[i]);
+          newActionPairing.reinforcers.push({
+            functionName: pairing.feedbackFunctions[i],
+            type:"Feedback",
+            constraint:[],
+            objective:[]
+          });
+        }
+      }
+      self.actionPairings.push(newActionPairing);
+    }
+  }
+
+  self.init = function()
+  {
+    console.log(sendCall(buildPayload('init', null, [{user:'INIT'}], null), 'init'));
+  }
+
+  self.reinforce = function(eventName, identity, metaData)
+  {
+    var response = sendCall(buildPayload('reinforce', eventName, identity, metaData), 'reinforce');
     if(response.status === 200)
     {
-      // Good status
-      return response.reinforcementDecision;
+      return response.reinforcementFunction.function;
     }
-    else{
-      // Bad status
-      return response.error;
-    }
-
   }
 
-  self.track = function(actionID, identity, metaData)
+  self.track = function(eventName, identity, metaData)
   {
-    var response = sendCall(buildPayload('track', actionID, identity, metaData), 'track');
+    var response = sendCall(buildPayload('track', eventName, identity, metaData), 'track');
   }
 
-  function buildPayload(type, actionID, identity, metaData)
+  function buildPayload(type, event, identity, metaData)
   {
 
     var payload = {
-      'appID' : self.credentials.appID,
-      'secret' : (self.credentials.secret.inProduction ? self.credentials.secret.production : self.credentials.secret.development),
+      'token' : self.credentials.token,
       'versionID': self.credentials.versionID,
-      'primaryIdentity':identity,
+      'build': sha1(JSON.stringify(self.actionPairings)),
+      'identity':JSON.stringify(identity),
       'UTC': Date.now(),
       'localTime': Date.now(),
-      'actionID': actionID,
-      'clientOS':'Node',
-      'clientOSVersion': '1',
-      'clientSDKVersion' : '2.0.0',
-      'metaData' : metaData
+      'ClientOS':'Node',
+      'ClientOSVersion': String(process.version),
+      'ClientAPIVersion' : '1.0.0'
     };
 
+    if(type === 'init')
+    {
+        payload.feedbackFunctions = JSON.stringify(self.feedbackFunctions);
+        payload.rewardFunctions = JSON.stringify(self.rewardFunctions);
+        payload.actionPairings = JSON.stringify(self.actionPairings);
+    }
+    else
+    {
+        payload.eventName = event;
+        if(metaData !== null)
+        {
+          payload.metaData = metaData;
+        }
+    }
+
+    if(self.credentials.key.inProduction)
+    {
+      payload.key = self.credentials.key.production;
+    }
+    else
+    {
+      payload.key = self.credentials.key.development;
+    }
     return payload;
   }
 
   function sendCall(data, type)
   {
-    var xhttp = new XMLHttpRequest();
-    xhttp.open("POST", 'https://staging-api.usedopamine.com/v3/app/' + type + '/', false);
-    xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-    xhttp.send(JSON.stringify(data));
-
-    // return response string as JSON object
-    return JSON.parse(xhttp.responseText);
+    var req = request('POST', 'https://api.usedopamine.com/v2/app/' + self.credentials.appID + '/' + type + '/', {json:data});
+    return JSON.parse(String(req.body));
   }
-
-
-  return self;
 }
+
+
+module.exports = exports = new Dopamine();
