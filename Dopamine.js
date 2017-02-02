@@ -1,7 +1,7 @@
 var sha1 = require('sha1');
 var request = require('sync-request');
 
-function Dopamine() 
+function Dopamine()
 {
 
   var self = this;
@@ -73,7 +73,7 @@ function Dopamine()
 
   self.init = function()
   {
-    console.log(sendCall(buildPayload('init', null, [{user:'INIT'}], null), 'init'));
+    console.log('init returns', sendCall(buildPayload('init', null, [{user:'INIT'}], null), 'init'));
   }
 
   self.reinforce = function(eventName, identity, metaData)
@@ -82,6 +82,10 @@ function Dopamine()
     if(response.status === 200)
     {
       return response.reinforcementFunction.function;
+    }
+    else {
+      console.log(response);
+      throw new Error('DOPAMINE had trouble talking to our server');
     }
   }
 
@@ -133,7 +137,7 @@ function Dopamine()
 
   function sendCall(data, type)
   {
-    var req = request('POST', 'https://api.usedopamine.com/v2/app/' + self.credentials.appID + '/' + type + '/', {json:data});
+    var req = request('POST', 'https://api.usedopamine.com/v3/app/' + '/' + type + '/', {json:data});
     return JSON.parse(String(req.body));
   }
 }
