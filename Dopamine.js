@@ -1,5 +1,5 @@
 var sha1 = require('sha1');
-var request = require('sync-request');
+var fetch = require('isomorphic-fetch');
 
 function Dopamine()
 {
@@ -76,17 +76,9 @@ function Dopamine()
     console.log('init returns', sendCall(buildPayload('init', null, [{user:'INIT'}], null), 'init'));
   }
 
-  self.reinforce = function(eventName, identity, metaData)
+  self.reinforce = function(eventName, identity, metaData, callback)
   {
-    var response = sendCall(buildPayload('reinforce', eventName, identity, metaData), 'reinforce');
-    if(response.status === 200)
-    {
-      return response.reinforcementFunction.function;
-    }
-    else {
-      console.log(response);
-      throw new Error('DOPAMINE had trouble talking to our server');
-    }
+    sendCall(buildPayload('reinforce', eventName, identity, metaData), 'reinforce', callback);
   }
 
   self.track = function(eventName, identity, metaData)
@@ -135,9 +127,15 @@ function Dopamine()
     return payload;
   }
 
-  function sendCall(data, type)
+  function sendCall(data, type, callback)
   {
-    var req = request('POST', 'https://api.usedopamine.com/v3/app/' + '/' + type + '/', {json:data});
+    var req = fetch('https://api.usedopamine.com/v3/app/' + '/' + type + '/', {
+      method: 'POST',
+      body: data,
+    })
+    .then(response => response.json())
+    .then(data => callback(null, data))
+    .catch(err => callback(err, null));
     return JSON.parse(String(req.body));
   }
 }
